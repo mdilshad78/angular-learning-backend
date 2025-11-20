@@ -20,7 +20,7 @@ app.use(
         origin: (origin, callback) => {
             const allowedOrigins = [
                 "http://localhost:4200",
-                "https://token-implement-frontend.vercel.app"
+                "https://angular-learning-ruddy.vercel.app/"
             ];
             if (!origin || allowedOrigins.includes(origin)) {
                 callback(null, true);
