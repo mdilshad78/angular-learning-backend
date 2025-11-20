@@ -17,7 +17,7 @@ app.use(express.json())
 
 app.use(
     cors({
-        origin: (origin, callback) => {
+        origin: (origin: any, callback: any) => {
             const allowedOrigins = [
                 "http://localhost:4200",
                 "https://angular-learning-ruddy.vercel.app/"
