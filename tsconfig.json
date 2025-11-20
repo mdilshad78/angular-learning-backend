@@ -4,7 +4,10 @@
     "module": "commonjs",
     "rootDir": "src",
     "outDir": "dist",
-
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ],
     // "moduleResolution": "node",  // ✅ change from "node10" to "node"
     "esModuleInterop": true,
     "strict": true,
@@ -14,6 +17,10 @@
     "allowSyntheticDefaultImports": true,
     "noImplicitAny": false
   },
-  "include": ["src"],
-  "exclude": ["node_modules"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
