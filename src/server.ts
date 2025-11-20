@@ -22,23 +22,6 @@ app.use(
     })
 );
 
-// app.use(
-//     cors({
-//         origin: (origin, callback) => {
-//             const allowedOrigins = [
-//                 "http://localhost:4200",
-//                 "https://angular-learning-ruddy.vercel.app/"
-//             ];
-//             if (!origin || allowedOrigins.includes(origin)) {
-//                 callback(null, true);
-//             } else {
-//                 callback(new Error("Not allowed by CORS"));
-//             }
-//         },
-//         credentials: true,
-//     })
-// );
-
 //database connection
 if (process.env.MONGO_URL) {
     DBConnection()
