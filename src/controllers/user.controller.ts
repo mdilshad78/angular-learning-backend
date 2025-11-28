@@ -6,47 +6,49 @@ import { error } from 'console';
 
 export const userResister = async (req: Request, res: Response) => {
     try {
-        const { username, email, password, phoneNumber, confirmPassword } = req.body;
+        console.log("REQ.BODY:", req.body); // form fields
+        console.log("REQ.FILE:", req.file); // uploaded file info
 
-        if (!username || !email || !password || !phoneNumber) {
-            return res.status(401).json({ message: "Username,Eamil,password and phoneNumber is required!" })
+        const { username, email, password, confirmPassword, phoneNumber } = req.body;
+        const image = req.file?.path; // Multer+Cloudinary file path
+
+        if (!username || !email || !password || !confirmPassword || !phoneNumber || !image) {
+            return res.status(400).json({ message: "All fields including image are required!" });
         }
 
-        if (password != confirmPassword) {
-            return res.status(401).json({ message: "Password or comfirmPassword is not match!" })
+        if (password !== confirmPassword) {
+            return res.status(400).json({ message: "Passwords do not match!" });
         }
 
-        const RegexPassword = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])[A-Za-z0-9!@#$%^&*]{8,}$/;
-
-        if (!RegexPassword.test(password)) {
-            return res.status(401).json({
-                message: "Password must be at least 8 characters long, include one uppercase letter, one number, and one special character",
-            })
+        const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])[A-Za-z0-9!@#$%^&*]{8,}$/;
+        if (!passwordRegex.test(password)) {
+            return res.status(400).json({
+                message:
+                    "Password must be at least 8 characters, include uppercase, number & special char",
+            });
         }
 
-        const userexist = await User.findOne({ email });
-        const phonenumberExist = await User.findOne({ phoneNumber })
+        if (await User.findOne({ email })) return res.status(400).json({ message: "Email already exists!" });
+        if (await User.findOne({ phoneNumber })) return res.status(400).json({ message: "Phone number already exists!" });
 
-        if (userexist) {
-            return res.status(400).json({ message: "Email already exists" });
-        }
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-        if (phonenumberExist) {
-            return res.status(401).json({ message: "PhoneNumber already exists" })
-        }
-
-        const hashpassword = await bcrypt.hash(password, 10);
-        const user = await User.create({ username, email, password: hashpassword, phoneNumber });
-
-        res.status(201).json({
-            message: "User registered",
-            data: { user }
+        const user = await User.create({
+            username,
+            email,
+            password: hashedPassword,
+            phoneNumber,
+            image, // Cloudinary URL
         });
 
+        console.log("Registered User:", user);
+        res.status(201).json({ message: "User registered successfully", data: user });
     } catch (error) {
+        console.error("Registration Error:", error);
         res.status(500).json({ error: "Server error" });
     }
-};
+};;
+
 
 export const userLogin = async (req: Request, res: Response) => {
     const { email, password } = req.body;

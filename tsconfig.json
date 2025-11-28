@@ -5,8 +5,8 @@
     "rootDir": "src",
     "outDir": "dist",
     "typeRoots": [
-      "./node_modules/@types",
-      "./src/types"
+      "./src/types",
+      "./node_modules/@types"
     ],
     // "moduleResolution": "node",  // ✅ change from "node10" to "node"
     "esModuleInterop": true,
