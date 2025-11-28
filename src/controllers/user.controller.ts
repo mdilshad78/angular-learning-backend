@@ -3,17 +3,15 @@ import User from '../models/user.models';
 import bcrypt from 'bcryptjs';
 import { generateAccessToken } from '../utils/generateToken';
 import { error } from 'console';
+import cloudinary from '../config/cloudinary';
 
 export const userResister = async (req: Request, res: Response) => {
     try {
-        console.log("REQ.BODY:", req.body); // form fields
-        console.log("REQ.FILE:", req.file); // uploaded file info
-
         const { username, email, password, confirmPassword, phoneNumber } = req.body;
-        const image = req.file?.path; // Multer+Cloudinary file path
 
-        if (!username || !email || !password || !confirmPassword || !phoneNumber || !image) {
-            return res.status(400).json({ message: "All fields including image are required!" });
+        // Validate fields
+        if (!username || !email || !password || !confirmPassword || !phoneNumber) {
+            return res.status(400).json({ message: "All fields are required!" });
         }
 
         if (password !== confirmPassword) {
@@ -23,31 +21,95 @@ export const userResister = async (req: Request, res: Response) => {
         const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])[A-Za-z0-9!@#$%^&*]{8,}$/;
         if (!passwordRegex.test(password)) {
             return res.status(400).json({
-                message:
-                    "Password must be at least 8 characters, include uppercase, number & special char",
+                message: "Password must be at least 8 characters, include uppercase, number & special char",
             });
         }
 
-        if (await User.findOne({ email })) return res.status(400).json({ message: "Email already exists!" });
-        if (await User.findOne({ phoneNumber })) return res.status(400).json({ message: "Phone number already exists!" });
+        // Check if user exists **before uploading**
+        if (await User.findOne({ email })) {
+            return res.status(400).json({ message: "Email already exists!" });
+        }
+        if (await User.findOne({ phoneNumber })) {
+            return res.status(400).json({ message: "Phone number already exists!" });
+        }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        if (!req.file) {
+            return res.status(400).json({ message: "Profile image is required!" });
+        }
 
-        const user = await User.create({
-            username,
-            email,
-            password: hashedPassword,
-            phoneNumber,
-            image, // Cloudinary URL
-        });
+        // Upload to Cloudinary manually
+        const result = await cloudinary.uploader.upload_stream(
+            { folder: "users", public_id: `${Date.now()}-${req.file.originalname}` },
+            async (error: any, result: any) => {
+                if (error) {
+                    console.error("Cloudinary Error:", error);
+                    return res.status(500).json({ message: "Image upload failed" });
+                }
 
-        console.log("Registered User:", user);
-        res.status(201).json({ message: "User registered successfully", data: user });
+                const hashedPassword = await bcrypt.hash(password, 10);
+
+                const user = await User.create({
+                    username,
+                    email,
+                    password: hashedPassword,
+                    phoneNumber,
+                    image: result.secure_url,
+                });
+
+                res.status(201).json({ message: "User registered successfully", data: user });
+            }
+        );
+
+        // Pipe the buffer to Cloudinary upload
+        (result as any).end(req.file.buffer);
+
     } catch (error) {
         console.error("Registration Error:", error);
         res.status(500).json({ error: "Server error" });
     }
-};;
+};
+
+// export const userResister = async (req: Request, res: Response) => {
+//     try {
+//         const { username, email, password, confirmPassword, phoneNumber } = req.body;
+//         const image = req.file?.path; // Multer+Cloudinary file path
+
+//         if (!username || !email || !password || !confirmPassword || !phoneNumber || !image) {
+//             return res.status(400).json({ message: "All fields including image are required!" });
+//         }
+
+//         if (password !== confirmPassword) {
+//             return res.status(400).json({ message: "Passwords do not match!" });
+//         }
+
+//         const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])[A-Za-z0-9!@#$%^&*]{8,}$/;
+//         if (!passwordRegex.test(password)) {
+//             return res.status(400).json({
+//                 message:
+//                     "Password must be at least 8 characters, include uppercase, number & special char",
+//             });
+//         }
+
+//         if (await User.findOne({ email })) return res.status(400).json({ message: "Email already exists!" });
+//         if (await User.findOne({ phoneNumber })) return res.status(400).json({ message: "Phone number already exists!" });
+
+//         const hashedPassword = await bcrypt.hash(password, 10);
+
+//         const user = await User.create({
+//             username,
+//             email,
+//             password: hashedPassword,
+//             phoneNumber,
+//             image, // Cloudinary URL
+//         });
+
+//         console.log("Registered User:", user);
+//         res.status(201).json({ message: "User registered successfully", data: user });
+//     } catch (error) {
+//         console.error("Registration Error:", error);
+//         res.status(500).json({ error: "Server error" });
+//     }
+// };
 
 
 export const userLogin = async (req: Request, res: Response) => {
