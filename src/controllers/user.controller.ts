@@ -3,13 +3,13 @@ import User from '../models/user.models';
 import bcrypt from 'bcryptjs';
 import { generateAccessToken } from '../utils/generateToken';
 import { error } from 'console';
-import cloudinary from '../config/cloudinary';
+import cloudinary from "../config/cloudinary";
 
-export const userResister = async (req: Request, res: Response) => {
+
+export const userResister = async (req: any, res: any) => {
     try {
         const { username, email, password, confirmPassword, phoneNumber } = req.body;
 
-        // Validate fields
         if (!username || !email || !password || !confirmPassword || !phoneNumber) {
             return res.status(400).json({ message: "All fields are required!" });
         }
@@ -18,14 +18,7 @@ export const userResister = async (req: Request, res: Response) => {
             return res.status(400).json({ message: "Passwords do not match!" });
         }
 
-        const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])[A-Za-z0-9!@#$%^&*]{8,}$/;
-        if (!passwordRegex.test(password)) {
-            return res.status(400).json({
-                message: "Password must be at least 8 characters, include uppercase, number & special char",
-            });
-        }
-
-        // Check if user exists **before uploading**
+        // Check if user already exists BEFORE uploading
         if (await User.findOne({ email })) {
             return res.status(400).json({ message: "Email already exists!" });
         }
@@ -38,29 +31,25 @@ export const userResister = async (req: Request, res: Response) => {
         }
 
         // Upload to Cloudinary manually
-        const result = await cloudinary.uploader.upload_stream(
-            { folder: "users", public_id: `${Date.now()}-${req.file.originalname}` },
-            async (error: any, result: any) => {
-                if (error) {
-                    console.error("Cloudinary Error:", error);
-                    return res.status(500).json({ message: "Image upload failed" });
-                }
-
-                const hashedPassword = await bcrypt.hash(password, 10);
-
-                const user = await User.create({
-                    username,
-                    email,
-                    password: hashedPassword,
-                    phoneNumber,
-                    image: result.secure_url,
-                });
-
-                res.status(201).json({ message: "User registered successfully", data: user });
+        const result = await cloudinary.uploader.upload_stream({ folder: "users" }, async (error: any, result: any) => {
+            if (error) {
+                console.error("Cloudinary Error:", error);
+                return res.status(500).json({ message: "Image upload failed" });
             }
-        );
 
-        // Pipe the buffer to Cloudinary upload
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            const user = await User.create({
+                username,
+                email,
+                password: hashedPassword,
+                phoneNumber,
+                image: result.secure_url,
+            });
+
+            res.status(201).json({ message: "User registered successfully", data: user });
+        });
+
         (result as any).end(req.file.buffer);
 
     } catch (error) {
@@ -68,6 +57,7 @@ export const userResister = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Server error" });
     }
 };
+
 
 // export const userResister = async (req: Request, res: Response) => {
 //     try {
